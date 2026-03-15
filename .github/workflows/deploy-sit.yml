@@ -1,0 +1,60 @@
+name: Deploy to SIT
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/unit/ -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: sit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package Layer
+        run: |
+          chmod +x scripts/package_layer.sh
+          scripts/package_layer.sh
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::815856636111:role/bbws-auth-layer-github-actions-role
+          aws-region: eu-west-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=kimmy-ai-terraform-state-815856636111" \
+            -backend-config="key=bbws-auth-layer/terraform.tfstate" \
+            -backend-config="region=eu-west-1" \
+            -backend-config="dynamodb_table=terraform-locks" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -var-file=environments/sit.tfvars -out=plan.tfplan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply plan.tfplan

@@ -1,0 +1,14 @@
+[project]
+name = "bbws-auth"
+version = "1.0.0"
+description = "Shared authorization library for the Kimmy AI platform"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true

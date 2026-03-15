@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Lambda Layer artifact
+bbws-auth-layer.zip
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# Secrets
+.env
+*.pem
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
