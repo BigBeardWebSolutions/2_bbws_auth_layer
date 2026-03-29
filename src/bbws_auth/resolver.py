@@ -18,7 +18,7 @@ class PermissionResolver:
     across invocations within the same execution environment.
 
     Usage:
-        resolver = PermissionResolver(table_name="tenant_permissions")
+        resolver = PermissionResolver(table_name="tenants")
 
         def handler(event, context):
             ctx = resolver.resolve(event)
@@ -26,7 +26,7 @@ class PermissionResolver:
             ...
     """
 
-    def __init__(self, table_name: str = "tenant_permissions"):
+    def __init__(self, table_name: str = "tenants"):
         dynamodb = boto3.resource("dynamodb")
         self._table = dynamodb.Table(table_name)
 
@@ -88,7 +88,7 @@ class PermissionResolver:
 
         # Query 1: Get user role assignment
         user_response = self._table.get_item(
-            Key={"pk": f"TENANT#{tenant_id}", "sk": f"USER#{user_sub}"}
+            Key={"PK": f"TENANT#{tenant_id}", "SK": f"USER#{user_sub}"}
         )
         user_record = user_response.get("Item")
         if not user_record:
@@ -103,7 +103,7 @@ class PermissionResolver:
 
         # Query 2: Get role definition
         role_response = self._table.get_item(
-            Key={"pk": f"TENANT#{tenant_id}", "sk": f"ROLE#{role_name}"}
+            Key={"PK": f"TENANT#{tenant_id}", "SK": f"ROLE#{role_name}"}
         )
         role_record = role_response.get("Item")
         if not role_record:

@@ -31,7 +31,7 @@ def query_tenant_data(table, tenant_ctx: TenantContext, sk_condition) -> dict:
 
     return table.query(
         KeyConditionExpression=(
-            Key("pk").eq(f"TENANT#{tenant_ctx.tenant_id}") & sk_condition
+            Key("PK").eq(f"TENANT#{tenant_ctx.tenant_id}") & sk_condition
         )
     )
 
@@ -63,6 +63,6 @@ def query_tenant_data_as_platform(
 
     return table.query(
         KeyConditionExpression=(
-            Key("pk").eq(f"TENANT#{target_tenant_id}") & sk_condition
+            Key("PK").eq(f"TENANT#{target_tenant_id}") & sk_condition
         )
     )

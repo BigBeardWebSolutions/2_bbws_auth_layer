@@ -15,7 +15,7 @@ class TestResolverPlatform:
 
     @patch("bbws_auth.resolver.boto3")
     def test_resolves_platform_super_admin(self, mock_boto3):
-        resolver = PermissionResolver(table_name="tenant_permissions")
+        resolver = PermissionResolver(table_name="tenants")
         event = make_v2_event({
             "sub": "admin-sub",
             "email": "admin@bbws.co.za",

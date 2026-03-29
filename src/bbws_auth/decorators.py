@@ -6,7 +6,7 @@ from .exceptions import AuthError
 from .resolver import PermissionResolver
 
 
-def require_permission(*permissions: str, table_name: str = "tenant_permissions"):
+def require_permission(*permissions: str, table_name: str = "tenants"):
     """Decorator that enforces permission checks on a Lambda handler.
 
     Usage:
