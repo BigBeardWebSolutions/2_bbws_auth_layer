@@ -80,11 +80,15 @@ class PermissionResolver:
 
     def _resolve_tenant(self, claims: dict) -> TenantContext:
         """Resolve permissions for a tenant (customer) user."""
-        tenant_id = claims.get("custom:tenant_id", "")
+        tenant_id = (
+            claims.get("tenant_id")
+            or claims.get("custom:tenant_id")
+            or claims.get("custom:tid", "")
+        )
         user_sub = claims.get("sub", "")
 
         if not tenant_id:
-            raise UnauthorizedError("Tenant user missing custom:tenant_id")
+            raise UnauthorizedError("Tenant user missing tenant_id claim")
 
         # Query 1: Get user role assignment
         user_response = self._table.get_item(

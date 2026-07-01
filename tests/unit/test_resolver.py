@@ -198,8 +198,41 @@ class TestResolverTenant:
             "custom:tenant_id": "",
             "cognito:groups": "",
         })
-        with pytest.raises(UnauthorizedError, match="missing custom:tenant_id"):
+        with pytest.raises(UnauthorizedError, match="missing tenant_id claim"):
             resolver.resolve(event)
+
+    @patch("bbws_auth.resolver.boto3")
+    def test_resolves_tenant_from_injected_tenant_id_claim(self, mock_boto3):
+        """Pre-Token Generation V2_0 injects tenant_id (unprefixed) — resolver must read it."""
+        mock_table = MagicMock()
+        mock_boto3.resource.return_value.Table.return_value = mock_table
+
+        mock_table.get_item.side_effect = [
+            {
+                "Item": {
+                    "role": "editor",
+                    "permission_overrides": {"grant": [], "revoke": []},
+                }
+            },
+            {
+                "Item": {
+                    "permissions": ["site:create", "site:read"]
+                }
+            },
+        ]
+
+        resolver = PermissionResolver()
+        event = make_v2_event({
+            "sub": "portal-user-sub",
+            "email": "user@portal.com",
+            "custom:user_type": "tenant",
+            "tenant_id": "tenant-portal-001",
+            "cognito:groups": "",
+        })
+        ctx = resolver.resolve(event)
+        assert ctx.user_type == "tenant"
+        assert ctx.tenant_id == "tenant-portal-001"
+        assert ctx.role == "editor"
 
 
 class TestResolverEdgeCases:
