@@ -33,7 +33,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::093646564004:role/bbws-auth-layer-github-actions-role
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: af-south-1
 
       - name: Setup Terraform
@@ -45,10 +45,10 @@ jobs:
         working-directory: terraform
         run: |
           terraform init \
-            -backend-config="bucket=kimmy-ai-terraform-state-093646564004" \
+            -backend-config="bucket=bbws-terraform-state-prod" \
             -backend-config="key=bbws-auth-layer/terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=terraform-locks" \
+            -backend-config="dynamodb_table=bbws-terraform-locks-prod" \
             -backend-config="encrypt=true"
 
       - name: Terraform Plan
