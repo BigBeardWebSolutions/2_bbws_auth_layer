@@ -78,18 +78,23 @@ resource "aws_iam_role_policy" "github_actions_ci" {
         ]
       },
       {
-        Sid    = "SSMParameter"
+        Sid    = "SSMParameterActions"
         Effect = "Allow"
         Action = [
           "ssm:PutParameter",
           "ssm:GetParameter",
           "ssm:GetParameters",
-          "ssm:DescribeParameters",
           "ssm:DeleteParameter",
           "ssm:AddTagsToResource",
           "ssm:ListTagsForResource",
         ]
         Resource = "arn:aws:ssm:${data.aws_region.ci.name}:${data.aws_caller_identity.ci.account_id}:parameter/kimmy-ai/${var.environment}/bbws-auth/*"
+      },
+      {
+        Sid      = "SSMDescribeParameters"
+        Effect   = "Allow"
+        Action   = ["ssm:DescribeParameters"]
+        Resource = "*"
       },
       {
         Sid    = "IAMOIDCRead"
