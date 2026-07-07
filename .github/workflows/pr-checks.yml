@@ -1,0 +1,82 @@
+name: PR Checks
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        if: ${{ hashFiles('requirements.txt', 'pyproject.toml') != '' }}
+        with:
+          python-version: "3.12"
+
+      - name: Python unit tests (blocking)
+        if: ${{ hashFiles('requirements.txt', 'pyproject.toml') != '' }}
+        run: |
+          set -e
+          [ -f requirements.txt ] && pip install -q -r requirements.txt
+          [ -f requirements-dev.txt ] && pip install -q -r requirements-dev.txt
+          if [ -f pyproject.toml ] && [ ! -f requirements.txt ]; then pip install -q -e ".[dev]" 2>/dev/null || pip install -q -e .; fi
+          pip show pytest >/dev/null 2>&1 || pip install -q pytest
+          if [ -d tests/unit ]; then
+            python -m pytest tests/unit -q
+          elif [ -d tests ]; then
+            python -m pytest tests -q \
+              --ignore=tests/e2e --ignore=tests/integration --ignore=tests/smoke \
+              --ignore=tests/proxy --ignore=tests/proxies --ignore=tests/bdd 2>/dev/null \
+            || python -m pytest tests -q
+          else
+            echo "No tests/ directory — skipping python tests"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: ${{ hashFiles('package.json') != '' }}
+        with:
+          node-version: "20"
+
+      - name: Node unit tests (blocking)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          set -e
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          # CI=true (set by Actions) keeps vitest/jest out of watch mode
+          if node -e "process.exit(require('./package.json').scripts?.['test:run'] ? 0 : 1)"; then
+            npm run test:run
+          else
+            npm test --if-present
+          fi
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Pre-commit hooks on changed files (blocking)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          if [ -f .pre-commit-config.yaml ]; then
+            if [ -n "$BASE_SHA" ]; then
+              pipx run pre-commit run --from-ref "$BASE_SHA" --to-ref HEAD --show-diff-on-failure
+            else
+              pipx run pre-commit run --all-files --show-diff-on-failure
+            fi
+          else
+            echo "No .pre-commit-config.yaml — skipping"
+          fi
