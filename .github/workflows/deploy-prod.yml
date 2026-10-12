@@ -50,7 +50,7 @@ jobs:
             -backend-config="bucket=bbws-terraform-state-prod" \
             -backend-config="key=bbws-auth-layer/terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=bbws-terraform-locks-prod" \
+            -backend-config="dynamodb_table=bbws-terraform-locks" \
             -backend-config="encrypt=true"
 
       - name: Terraform Plan
